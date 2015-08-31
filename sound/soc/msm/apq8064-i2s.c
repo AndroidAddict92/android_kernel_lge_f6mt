@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1146,10 +1146,8 @@ static int msm_mi2s_audrx_init(struct snd_soc_pcm_runtime *rtd)
 			SOCINFO_VERSION_MINOR(revision));
 	} else if ((SOCINFO_VERSION_MAJOR(revision) == 1 &&
 		    SOCINFO_VERSION_MINOR(revision) >= 1 &&
-		    (machine_is_apq8064_cdp() || machine_is_apq8064_adp_2() ||
-		     machine_is_apq8064_adp2_es2() ||
-			machine_is_apq8064_adp2_es2p5() ||
-			machine_is_apq8064_liquid())) ||
+		    (machine_is_apq8064_cdp() ||
+		     machine_is_apq8064_liquid())) ||
 		   SOCINFO_VERSION_MAJOR(revision) > 1) {
 		pr_debug("%s: MBHC mechanical switch available APQ8064 detected\n",
 		__func__);
@@ -1865,10 +1863,8 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 			SOCINFO_VERSION_MINOR(revision));
 	} else if ((SOCINFO_VERSION_MAJOR(revision) == 1 &&
 		    SOCINFO_VERSION_MINOR(revision) >= 1 &&
-		    (machine_is_apq8064_cdp() || machine_is_apq8064_adp_2() ||
-			machine_is_apq8064_adp2_es2() ||
-			machine_is_apq8064_adp2_es2p5() ||
-			machine_is_apq8064_liquid())) ||
+		    (machine_is_apq8064_cdp() ||
+		     machine_is_apq8064_liquid())) ||
 		   SOCINFO_VERSION_MAJOR(revision) > 1) {
 		pr_debug("%s: MBHC mechanical switch available APQ8064 detected\n",
 		__func__);
@@ -2746,7 +2742,7 @@ static int __init msm_audio_init(void)
 	u32	version = socinfo_get_platform_version();
 	if (!machine_is_apq8064_mtp() ||
 	(SOCINFO_VERSION_MINOR(version) != 1)) {
-		pr_info("%s: Not APQ8064-i2s machine type\n", __func__);
+		pr_info("%s: Not APQ8064 in I2S mode\n", __func__);
 		return -ENODEV;
 	}
 	pr_debug("%s: APQ8064 is in I2S mode\n", __func__);
@@ -2803,7 +2799,8 @@ module_init(msm_audio_init);
 
 static void __exit msm_audio_exit(void)
 {
-	if (!soc_class_is_apq8064() || socinfo_get_id() == 130) {
+	if (!(cpu_is_apq8064() || cpu_is_apq8064ab()) ||
+				 (socinfo_get_id() == 130)) {
 		pr_err("%s: Not the right machine type\n", __func__);
 		return ;
 	}

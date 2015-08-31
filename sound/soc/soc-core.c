@@ -177,6 +177,28 @@ static ssize_t soc_codec_reg_show(struct snd_soc_codec *codec, char *buf,
 	return total;
 }
 
+//                                           
+ssize_t codec_reg_store(struct device *dev, struct device_attribute *attr, const char *buf,size_t count)
+{
+    int reg, data;
+    char r[6], d[5];
+    struct snd_soc_pcm_runtime *rtd = dev_get_drvdata(dev);
+
+    memset(r,0,6);
+    memset(d,0,5);
+    strncpy(r,&buf[0],5);
+    strncpy(d,&buf[6],4);
+
+    reg = simple_strtoul(r, NULL, 16);
+    data = simple_strtoul(d, NULL, 16);
+
+    printk("Codec Register Write %x = %x\n",reg,data);
+    snd_soc_write(rtd->codec, reg, data);
+
+    return count;
+}
+
+
 static ssize_t codec_reg_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -185,7 +207,8 @@ static ssize_t codec_reg_show(struct device *dev,
 	return soc_codec_reg_show(rtd->codec, buf, PAGE_SIZE, 0);
 }
 
-static DEVICE_ATTR(codec_reg, 0444, codec_reg_show, NULL);
+static DEVICE_ATTR(codec_reg, 0644, codec_reg_show, codec_reg_store);
+//                                         
 
 static ssize_t pmdown_time_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
@@ -1345,22 +1368,11 @@ static int soc_probe_dai_link(struct snd_soc_card *card, int num, int order)
 	if (ret < 0)
 		printk(KERN_WARNING "asoc: failed to add pmdown_time sysfs\n");
 
-	if (cpu_dai->driver->compress_dai) {
-		/*create compress_device"*/
-		ret = soc_new_compress(rtd, num);
-		if (ret < 0) {
-		  printk(KERN_ERR "asoc: can't create compress %s\n",
-					 dai_link->stream_name);
-			return ret;
-		}
-	} else {
-		/* create the pcm */
-		ret = soc_new_pcm(rtd, num);
-		if (ret < 0) {
-		  printk(KERN_ERR "asoc: can't create pcm %s :%d\n",
-			       dai_link->stream_name, ret);
-			return ret;
-		}
+	/* create the pcm */
+	ret = soc_new_pcm(rtd, num);
+	if (ret < 0) {
+		printk(KERN_ERR "asoc: can't create pcm %s\n", dai_link->stream_name);
+		return ret;
 	}
 
 	/* add platform data for AC97 devices */

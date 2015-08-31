@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -175,8 +175,6 @@ struct sitar_mbhc_config {
 	unsigned int gpio;
 	unsigned int gpio_irq;
 	int gpio_level_insert;
-	/* swap_gnd_mic returns true if extern GND/MIC swap switch toggled */
-	bool (*swap_gnd_mic) (struct snd_soc_codec *);
 };
 
 extern int sitar_hs_detect(struct snd_soc_codec *codec,
@@ -190,12 +188,25 @@ struct anc_header {
 #define anc_header_dec
 #endif
 
+#ifdef CONFIG_SWITCH_FSA8008
+enum sitar_mclk_bg_state {
+        MCLK_OFF_BANDGAP_OFF = 0,
+        MCLK_ON_BANDGAP_ON = 1,
+        MCLK_OF_BANDGAP_ON,
+        };
+extern void sitar_codec_enable_micbias2(struct snd_soc_codec *codec);
+#endif
 extern int sitar_mclk_enable(struct snd_soc_codec *codec, int mclk_enable,
 							 bool dapm);
 
 extern void *sitar_mbhc_cal_btn_det_mp(const struct sitar_mbhc_btn_detect_cfg
 				       *btn_det,
 				       const enum sitar_mbhc_btn_det_mem mem);
+
+#ifdef CONFIG_SWITCH_FSA8008
+extern void sitar_register_mclk_call_back(struct snd_soc_codec *codec,
+    int (*mclk_cb_fn) (struct snd_soc_codec *codec, int , bool ));
+#endif
 
 #define SITAR_MBHC_CAL_SIZE(buttons, rload) ( \
 	sizeof(enum sitar_micbias_num) + \
@@ -251,3 +262,13 @@ extern void *sitar_mbhc_cal_btn_det_mp(const struct sitar_mbhc_btn_detect_cfg
 	    sizeof(struct sitar_mbhc_imped_detect_cfg) + \
 	    (cfg_ptr->_n_rload * (sizeof(cfg_ptr->_rload[0]) + \
 				 sizeof(cfg_ptr->_alpha[0]))))
+
+#ifdef CONFIG_SWITCH_FSA8008
+/*
+                               
+                                                             
+                                   
+*/
+extern void sitar_codec_micbias2_ctl(int enable);
+#endif
+
