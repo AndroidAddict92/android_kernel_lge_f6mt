@@ -78,11 +78,9 @@
 #ifdef CONFIG_X86_LOCAL_APIC
 #include <asm/smp.h>
 #endif
-
-#ifdef CONFIG_BOOT_TIME_MARKER
-#include <mach/board.h>
-#endif
-
+/*                            */
+#include <mach/board_lge.h>
+/*                            */
 static int kernel_init(void *);
 
 extern void init_IRQ(void);
@@ -116,6 +114,11 @@ EXPORT_SYMBOL(system_state);
  */
 #define MAX_INIT_ARGS CONFIG_INIT_ENV_ARG_LIMIT
 #define MAX_INIT_ENVS CONFIG_INIT_ENV_ARG_LIMIT
+/*                                           */
+#ifdef CONFIG_LGE_PM
+static void smpl_count(void);
+#endif
+/*                                 */
 
 extern void time_init(void);
 /* Default late time init is NULL. archs can override this later. */
@@ -131,7 +134,9 @@ static char *static_command_line;
 
 static char *execute_command;
 static char *ramdisk_execute_command;
-
+/*                            */
+static char miniOS_command[] = "miniOS";
+/*                            */
 /*
  * If set, this is an indication to the drivers that reset the underlying
  * device before going ahead with the initialization otherwise driver might
@@ -390,13 +395,102 @@ static noinline void __init_refok rest_init(void)
 	cpu_idle();
 }
 
-/* Splash screen Boot marker value from LK */
-#ifdef CONFIG_BOOT_TIME_MARKER
-#define MAX_SS_LK_MARKER_SIZE 16
-char lk_splash_val[MAX_SS_LK_MARKER_SIZE] = "0";
-unsigned long kernel_start_marker;
-#endif
+/*                                           */
+#ifdef CONFIG_LGE_PM
+#define PWR_ON_EVENT_KEYPAD			0x1
+#define PWR_ON_EVENT_RTC			0x2
+#define PWR_ON_EVENT_CABLE			0x4
+#define PWR_ON_EVENT_SMPL			0x8
+#define PWR_ON_EVENT_WDOG			0x10
+#define PWR_ON_EVENT_USB_CHG		0x20
+#define PWR_ON_EVENT_WALL_CHG		0x40
+#define PWR_ON_EVENT_HARD_RESET		0x100
 
+extern struct file *fget(unsigned int fd);
+extern void fput(struct file *);
+extern uint16_t power_on_status_info_get(void);
+
+static void write_file(char *filename, char* data)
+{
+	int fd = -1;
+	loff_t pos = 0;
+	struct file* file;
+	mm_segment_t old_fs = get_fs();
+	set_fs(KERNEL_DS);
+
+	fd = sys_open((const char __user *)filename, O_WRONLY | O_CREAT, 0644);
+	printk("[SMPL_CNT] ===> write() : fd is %d\n", fd);
+	if(fd >=0)
+	{
+		file = fget(fd);
+		if(file)
+		{
+			vfs_write(file, data, strlen(data), &pos);
+			fput(file);
+		}
+		sys_close(fd);
+	}
+	else
+	{
+		printk("[SMPL_CNT] === > write : sys_open error!!!!\n");
+	}
+	set_fs(old_fs);
+}
+
+
+static void smpl_count(void)
+{
+	char* file_name = "/smpl_boot";
+	uint16_t boot_cause = 0;
+	char buf[32];
+
+	boot_cause = power_on_status_info_get();
+
+	switch (boot_cause) {
+		case PWR_ON_EVENT_KEYPAD:
+			strcpy(buf, "PWR_ON_EVENT_KEYPAD");
+			break;
+
+		case PWR_ON_EVENT_SMPL:
+			strcpy(buf, "PWR_ON_EVENT_SMPL");
+			break;
+
+		case PWR_ON_EVENT_WDOG:
+			strcpy(buf, "PWR_ON_EVENT_WDOG");
+			break;
+
+		case PWR_ON_EVENT_USB_CHG:
+			strcpy(buf, "PWR_ON_EVENT_USB_CHG");
+			break;
+
+		case PWR_ON_EVENT_WALL_CHG:
+			strcpy(buf, "PWR_ON_EVENT_WALL_CHG");
+			break;
+
+		case PWR_ON_EVENT_HARD_RESET:
+			strcpy(buf, "PWR_ON_EVENT_HARD_RESET");
+			break;
+
+		default:
+			sprintf(buf, "%d", boot_cause);
+			break;
+	}
+
+	printk("[BOOT_CAUSE] %s \n", buf);
+
+	if(boot_cause==PWR_ON_EVENT_SMPL)
+	{
+		printk("[SMPL_CNT] ===> is smpl boot\n");
+		write_file(file_name, "1");
+	}
+	else
+	{
+		write_file(file_name, "0");
+		printk("[SMPL_CNT] ===> not smpl boot!!!!!\n");
+	}
+}
+#endif
+/*                                 */
 /* Check for early params. */
 static int __init do_early_param(char *param, char *val)
 {
@@ -411,10 +505,6 @@ static int __init do_early_param(char *param, char *val)
 				printk(KERN_WARNING
 				       "Malformed early option '%s'\n", param);
 		}
-#ifdef CONFIG_BOOT_TIME_MARKER
-		if (strcmp(param, "LK_splash") == 0)
-			strlcpy(lk_splash_val, val, sizeof(lk_splash_val));
-#endif
 	}
 	/* We accept everything at this stage. */
 	return 0;
@@ -492,6 +582,11 @@ asmlinkage void __init start_kernel(void)
 	smp_setup_processor_id();
 	debug_objects_early_init();
 
+	/*
+	 * Set up the the initial canary ASAP:
+	 */
+	boot_init_stack_canary();
+
 	cgroup_init_early();
 
 	local_irq_disable();
@@ -506,13 +601,6 @@ asmlinkage void __init start_kernel(void)
 	page_address_init();
 	printk(KERN_NOTICE "%s", linux_banner);
 	setup_arch(&command_line);
-#ifdef CONFIG_BOOT_TIME_MARKER
-	kernel_start_marker = msm_timer_get_sclk_ticks();
-#endif
-	/*
-	 * Set up the the initial canary ASAP:
-	 */
-	boot_init_stack_canary();
 	mm_init_owner(&init_mm, &init_task);
 	mm_init_cpumask(&init_mm);
 	setup_command_line(command_line);
@@ -652,9 +740,6 @@ asmlinkage void __init start_kernel(void)
 	acpi_early_init(); /* before LAPIC and SMP init */
 	sfi_init_late();
 
-#ifdef CONFIG_BOOT_TIME_MARKER
-	init_marker_proc_fs();
-#endif
 	ftrace_init();
 
 	/* Do the rest non-__init'ed, we're now alive */
@@ -814,6 +899,15 @@ static void __init do_pre_smp_initcalls(void)
 static void run_init_process(const char *init_filename)
 {
 	argv_init[0] = init_filename;
+
+	/*                            */
+	if(lge_get_boot_mode() == LGE_BOOT_MODE_MINIOS)
+	{
+		printk(KERN_WARNING "BOOT MODE %s\n", miniOS_command);
+		argv_init[1] = miniOS_command;
+	}
+	/*                            */
+
 	kernel_execve(init_filename, argv_init, envp_init);
 }
 
@@ -831,8 +925,6 @@ static noinline int init_post(void)
 
 
 	current->signal->flags |= SIGNAL_UNKILLABLE;
-
-	place_marker("Linux_Kernel - End");
 
 	if (ramdisk_execute_command) {
 		run_init_process(ramdisk_execute_command);
@@ -912,6 +1004,11 @@ static int __init kernel_init(void * unused)
 	 * initmem segments and start the user-mode stuff..
 	 */
 
+/*                                           */
+#ifdef CONFIG_LGE_PM
+	smpl_count();
+#endif
+/*                                  */
 	init_post();
 	return 0;
 }
