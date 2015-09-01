@@ -2,7 +2,7 @@
  *
  * Copyright (C) 2008 Google, Inc.
  * Author: Brian Swetland <swetland@google.com>
- * Copyright (c) 2009-2012, 2014 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -199,7 +199,6 @@ enum usb_vdd_value {
  *              USB enters LPM.
  * @bus_scale_table: parameters for bus bandwidth requirements
  * @mhl_dev_name: MHL device name used to register with MHL driver.
- * @mpm_xo_wakeup_int: MPM to KRAIT interrupt for remote wakeup
  */
 struct msm_otg_platform_data {
 	int *phy_init_seq;
@@ -218,13 +217,7 @@ struct msm_otg_platform_data {
 	bool core_clk_always_on_workaround;
 	struct msm_bus_scale_pdata *bus_scale_table;
 	const char *mhl_dev_name;
-	bool ignore_wakeup_source;
-	unsigned int mpm_xo_wakeup_int;
-	bool allow_host_vdd_min_wo_rework;
 };
-
-/* phy related flags */
-#define ENABLE_DP_MANUAL_PULLUP	BIT(0)
 
 /* Timeout (in msec) values (min - max) associated with OTG timers */
 
@@ -307,12 +300,6 @@ struct msm_otg {
 	struct clk *pclk;
 	struct clk *phy_reset_clk;
 	struct clk *core_clk;
-	/* usb Regulators */
-	struct regulator *hsusb_3p3;
-	struct regulator *hsusb_1p8;
-	struct regulator *hsusb_vddcx;
-	struct regulator *vbus_otg;
-	struct regulator *mhl_usb_hs_switch;
 	void __iomem *regs;
 #define ID		0
 #define B_SESS_VLD	1
@@ -341,8 +328,6 @@ struct msm_otg {
 	unsigned cur_power;
 	struct delayed_work chg_work;
 	struct delayed_work pmic_id_status_work;
-	struct delayed_work check_ta_work;
-	struct delayed_work restart_host_work;
 	enum usb_chg_state chg_state;
 	enum usb_chg_type chg_type;
 	unsigned dcd_time;
@@ -372,15 +357,6 @@ struct msm_otg {
 	   * USB bus is suspended but cable is connected.
 	   */
 #define ALLOW_LPM_ON_DEV_SUSPEND	    BIT(2)
-	/*
-	 * Allow XO shutdown in host bus suspend if MPM to KRAIT
-	 * interrupt pin is available.
-	 */
-#define ALLOW_XO_SHUTDOWN		BIT(3)
-	/*
-	 * Allow PHY_RETENTION in HOST mode
-	 */
-#define ALLOW_HOST_MODE_PHY_RETENTION	BIT(4)
 	unsigned long lpm_flags;
 #define PHY_PWR_COLLAPSED		BIT(0)
 #define PHY_RETENTIONED			BIT(1)
@@ -392,16 +368,6 @@ struct msm_otg {
 	u8 active_tmout;
 	struct hrtimer timer;
 	enum usb_vdd_type vdd_type;
-	struct power_supply *psy;
-	struct dentry *msm_otg_dbg_root;
-	struct completion pmic_vbus_init;
-	bool debug_bus_voting_enabled;
-	bool mhl_det_in_progress;
-	bool keep_vbus;
-	bool vbus_is_on;
-	bool debug_aca_enabled;
-	bool aca_id_turned_on;
-
 };
 
 struct msm_hsic_host_platform_data {
@@ -409,14 +375,18 @@ struct msm_hsic_host_platform_data {
 	unsigned data;
 	struct msm_bus_scale_pdata *bus_scale_table;
 	unsigned log2_irq_thresh;
+
+	/*swfi latency is required while driving resume on to the bus */
 	u32 swfi_latency;
+
+	/*standalone latency is required when HSCI is active*/
+	u32 standalone_latency;
 };
 
 struct msm_usb_host_platform_data {
 	unsigned int power_budget;
 	int pmic_gpio_dp_irq;
 	unsigned int dock_connect_irq;
-	bool allow_host_vdd_min_wo_rework;
 };
 
 /**
@@ -429,6 +399,12 @@ struct msm_hsic_peripheral_platform_data {
 	bool core_clk_always_on_workaround;
 };
 
+enum usb_pipe_mem_type {
+	SPS_PIPE_MEM = 0,	/* Default, SPS dedicated pipe memory */
+	USB_PRIVATE_MEM,	/* USB's private memory */
+	SYSTEM_MEM,		/* System RAM, requires allocation */
+};
+
 /**
  * struct usb_bam_pipe_connect: pipe connection information
  * between USB/HSIC BAM and another BAM. USB/HSIC BAM can be
@@ -437,6 +413,7 @@ struct msm_hsic_peripheral_platform_data {
  * @src_pipe_index: src bam pipe index.
  * @dst_phy_addr: dst bam physical address.
  * @dst_pipe_index: dst bam pipe index.
+ * @mem_type: type of memory used for BAM FIFOs
  * @data_fifo_base_offset: data fifo offset.
  * @data_fifo_size: data fifo size.
  * @desc_fifo_base_offset: descriptor fifo offset.
@@ -447,6 +424,7 @@ struct usb_bam_pipe_connect {
 	u32 src_pipe_index;
 	u32 dst_phy_addr;
 	u32 dst_pipe_index;
+	enum usb_pipe_mem_type mem_type;
 	u32 data_fifo_base_offset;
 	u32 data_fifo_size;
 	u32 desc_fifo_base_offset;
@@ -462,6 +440,7 @@ struct usb_bam_pipe_connect {
  * @usb_bam_num_pipes: max number of pipes to use.
  * @active_conn_num: number of active pipe connections.
  * @usb_base_address: BAM physical address.
+ * @ignore_core_reset_ack: BAM can ignore ACK from USB core during PIPE RESET
  */
 struct msm_usb_bam_platform_data {
 	struct usb_bam_pipe_connect *connections;
@@ -469,15 +448,15 @@ struct msm_usb_bam_platform_data {
 	int usb_bam_num_pipes;
 	u32 total_bam_num;
 	u32 usb_base_address;
+	bool ignore_core_reset_ack;
 };
 
 enum usb_bam {
-	HSUSB_BAM = 0,
+	SSUSB_BAM = 0,
+	HSUSB_BAM,
 	HSIC_BAM,
+	MAX_BAMS,
 };
-
-/* for usb host controller driver */
-extern struct usb_phy *msm_usb_get_transceiver(int);
 
 #ifdef CONFIG_USB_DWC3_MSM
 int msm_ep_config(struct usb_ep *ep);

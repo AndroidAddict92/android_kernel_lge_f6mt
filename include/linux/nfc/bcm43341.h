@@ -35,7 +35,7 @@
 #define BCMNFC_WAKE_CTL			_IO(BCMNFC_MAGIC, 0x05)
 #define BCMNFC_READ_MULTI_PACKETS	_IO(BCMNFC_MAGIC, 0x06)
 
-struct bcm2079x_platform_data {
+struct bcm43341_platform_data {
 	unsigned int irq_gpio;
 	unsigned int en_gpio;
 	int wake_gpio;

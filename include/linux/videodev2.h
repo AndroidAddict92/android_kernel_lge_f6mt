@@ -1299,6 +1299,9 @@ enum v4l2_colorfx {
 #define V4L2_CID_SPECIAL_EFFECT			(V4L2_CID_BASE+43)
 /* Minimum number of buffer neede by the device */
 
+#define V4L2_CID_NIGHT_MODE			(V4L2_CID_BASE+44)  /*                                                                  */
+#define V4L2_CID_FPS_RANGE			(V4L2_CID_BASE+45)  /*                                                                 */
+
 /*  MPEG-class control IDs defined by V4L2 */
 #define V4L2_CID_MPEG_BASE 			(V4L2_CTRL_CLASS_MPEG | 0x900)
 #define V4L2_CID_MPEG_CLASS 			(V4L2_CTRL_CLASS_MPEG | 1)
@@ -1803,7 +1806,6 @@ enum v4l2_mpeg_vidc_video_h264_au_delimiter {
 	V4L2_MPEG_VIDC_VIDEO_H264_AU_DELIMITER_DISABLED = 0,
 	V4L2_MPEG_VIDC_VIDEO_H264_AU_DELIMITER_ENABLED = 1
 };
-
 #define V4L2_CID_MPEG_VIDC_VIDEO_H264_VUI_TIMING_INFO \
 		(V4L2_CID_MPEG_MSM_VIDC_BASE + 23)
 enum v4l2_mpeg_vidc_video_h264_vui_timing_info {
@@ -1845,11 +1847,6 @@ enum  v4l2_exposure_auto_type {
 
 #define V4L2_CID_IRIS_ABSOLUTE			(V4L2_CID_CAMERA_CLASS_BASE+17)
 #define V4L2_CID_IRIS_RELATIVE			(V4L2_CID_CAMERA_CLASS_BASE+18)
-
-/* User-class control IDs specific to the msm_ba driver */
-#define MSM_BA_PRIV_BASE_START			(V4L2_CID_USER_BASE | 0x7000)
-#define MSM_BA_PRIV_SD_NODE_ADDR		(MSM_BA_PRIV_BASE_START + 1)
-#define MSM_BA_PRIV_FPS			(MSM_BA_PRIV_BASE_START + 2)
 
 /* FM Modulator class control IDs */
 #define V4L2_CID_FM_TX_CLASS_BASE		(V4L2_CTRL_CLASS_FM_TX | 0x900)
@@ -2093,6 +2090,7 @@ struct v4l2_enc_idx {
 #define V4L2_ENC_CMD_STOP       (1)
 #define V4L2_ENC_CMD_PAUSE      (2)
 #define V4L2_ENC_CMD_RESUME     (3)
+#define V4L2_ENC_QCOM_CMD_FLUSH  (4)
 
 /* Flags for V4L2_ENC_CMD_STOP */
 #define V4L2_ENC_CMD_STOP_AT_GOP_END    (1 << 0)
@@ -2129,6 +2127,9 @@ struct v4l2_encoder_cmd {
 /* Flags for V4L2_DEC_QCOM_CMD_FLUSH */
 #define V4L2_DEC_QCOM_CMD_FLUSH_OUTPUT  (1 << 0)
 #define V4L2_DEC_QCOM_CMD_FLUSH_CAPTURE (1 << 1)
+
+#define V4L2_QCOM_CMD_FLUSH_OUTPUT  (1 << 0)
+#define V4L2_QCOM_CMD_FLUSH_CAPTURE (1 << 1)
 
 /* Play format requirements (returned by the driver): */
 
@@ -2375,28 +2376,6 @@ struct v4l2_streamparm {
 		(V4L2_EVENT_MSM_VIDC_START + 3)
 #define V4L2_EVENT_MSM_VIDC_CLOSE_DONE	(V4L2_EVENT_MSM_VIDC_START + 4)
 
-#define V4L2_EVENT_MSM_BA_PRIVATE_EVENT_BASE	\
-		(V4L2_EVENT_PRIVATE_START + 5 * 1000)
-#define V4L2_EVENT_MSM_BA_START	V4L2_EVENT_MSM_BA_PRIVATE_EVENT_BASE
-#define V4L2_EVENT_MSM_BA_DEVICE_AVAILABLE	(V4L2_EVENT_MSM_BA_START + 1)
-#define V4L2_EVENT_MSM_BA_DEVICE_UNAVAILABLE	\
-		(V4L2_EVENT_MSM_BA_START + 2)
-#define V4L2_EVENT_MSM_BA_PORT_SETTINGS_CHANGED	\
-		(V4L2_EVENT_MSM_BA_START + 3)
-#define V4L2_EVENT_MSM_BA_SIGNAL_IN_LOCK	\
-		(V4L2_EVENT_MSM_BA_START + 4)
-#define V4L2_EVENT_MSM_BA_SIGNAL_LOST_LOCK	\
-		(V4L2_EVENT_MSM_BA_START + 5)
-#define V4L2_EVENT_MSM_BA_SOURCE_CHANGE	\
-		(V4L2_EVENT_MSM_BA_START + 6)
-#define V4L2_EVENT_MSM_BA_HDMI_HPD	\
-		(V4L2_EVENT_MSM_BA_START + 7)
-#define V4L2_EVENT_MSM_BA_HDMI_CEC_MESSAGE	\
-		(V4L2_EVENT_MSM_BA_START + 8)
-#define V4L2_EVENT_MSM_BA_CP	\
-		(V4L2_EVENT_MSM_BA_START + 9)
-#define V4L2_EVENT_MSM_BA_ERROR	\
-		(V4L2_EVENT_MSM_BA_START + 10)
 
 /* Payload for V4L2_EVENT_VSYNC */
 struct v4l2_event_vsync {

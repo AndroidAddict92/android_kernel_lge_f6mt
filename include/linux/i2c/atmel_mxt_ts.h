@@ -3,8 +3,7 @@
  *
  * Copyright (C) 2010 Samsung Electronics Co.Ltd
  * Author: Joonyoung Shim <jy0922.shim@samsung.com>
- * Copyright (c) 2011-2012, 2014-2015, The Linux Foundation. All rights
- * reserved.
+ * Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -16,7 +15,6 @@
 #define __LINUX_ATMEL_MXT_TS_H
 
 #include <linux/types.h>
-#include <video/msm_dba.h>
 
 /* Orient */
 #define MXT_NORMAL		0x0
@@ -36,7 +34,6 @@
 #define MXT_BOOTLOADER_ID_224E		0x06
 #define MXT_BOOTLOADER_ID_1386		0x01
 #define MXT_BOOTLOADER_ID_1386E		0x10
-#define MXT_BOOTLOADER_ID_1386E_v2_4	0x24
 
 /* Config data for a given maXTouch controller with a specific firmware */
 struct mxt_config_info {
@@ -54,7 +51,6 @@ struct mxt_config_info {
 /* The platform data for the Atmel maXTouch touchscreen driver */
 struct mxt_platform_data {
 	const struct mxt_config_info *config_array;
-	const char *attached_display_name;
 	size_t config_array_size;
 
 	/* touch panel's minimum and maximum coordinates */
@@ -71,8 +67,6 @@ struct mxt_platform_data {
 
 	unsigned long irqflags;
 	bool	i2c_pull_up;
-	bool no_regulator_support;
-	bool use_abs_reportid;
 	bool	digital_pwr_regulator;
 	int reset_gpio;
 	u32 reset_gpio_flags;
@@ -83,21 +77,6 @@ struct mxt_platform_data {
 	u8(*read_chg) (void);
 	int (*init_hw) (bool);
 	int (*power_on) (bool);
-
-	bool iox_support;
-	int iox_slave_id;
-	struct msm_dba_reg_info *dba_host;
 };
-
-/* auxilary data to handle display abstraction layer */
-struct mxt_data_dba_aux {
-	void *handle;
-	struct msm_dba_ops ops;
-	void *mxt_info;
-};
-
-#if defined(CONFIG_FB)
-extern int mdpclient_msm_fb_get_id(int idx, char *buf, int len);
-#endif
 
 #endif /* __LINUX_ATMEL_MXT_TS_H */

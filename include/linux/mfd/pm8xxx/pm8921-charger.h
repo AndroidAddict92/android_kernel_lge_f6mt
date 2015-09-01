@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -56,8 +56,21 @@ enum pm8921_chg_led_src_config {
 	LED_SRC_BYPASS,
 };
 
+/*           
+                                    
+                                
+*/
+
+typedef enum{
+	IUSB_REDUCE_METHOD = 0,
+	IUSB_USE_FOR_ISYSTEM_METHOD,
+	IUSB_NORMAL_METHOD,
+} xo_mitigation_way;
+/*                               */
+
 /**
  * struct pm8921_charger_platform_data -
+ * @safety_time:	max charging time in minutes incl. fast and trkl
  *			valid range 4 to 512 min. PON default 120 min
  * @ttrkl_time:		max trckl charging time in minutes
  *			valid range 1 to 64 mins. PON default 15 min
@@ -69,9 +82,6 @@ enum pm8921_chg_led_src_config {
  *			trickle to fast. This is also the minimum voltage the
  *			system operates at
  * @uvd_thresh_voltage:	the USB falling UVD threshold (mV) (PM8917 only)
- * @safe_current_ma:	The upper limit of current allowed to be pushed in
- *			battery. This ends up writing in a one time
- *			programmable register.
  * @resume_voltage_delta:	the (mV) drop to wait for before resume charging
  *				after the battery has been fully charged
  * @resume_charge_percent:	the % SOC the charger will drop to after the
@@ -97,6 +107,10 @@ enum pm8921_chg_led_src_config {
  * @get_batt_capacity_percent:
  *			a board specific function to return battery
  *			capacity. If null - a default one will be used
+ * @dc_unplug_check:	enables the reverse boosting fix for the DC_IN line
+ *			however, this should only be enabled for devices which
+ *			control the DC OVP FETs otherwise this option should
+ *			remain disabled
  * @has_dc_supply:	report DC online if this bit is set in board file
  * @trkl_voltage:	the trkl voltage in (mV) below which hw controlled
  *			 trkl charging happens with linear charger
@@ -123,34 +137,19 @@ enum pm8921_chg_led_src_config {
  *			resistance of the pads, connectors, battery terminals
  *			and rsense.
  * @led_src_config:	Power source for anode of charger indicator LED.
- * @btc_override:	disable the comparators for conifugrations where a
- *			suitable voltages don't appear on vbatt therm line
- *			for the charger to detect battery is either cold / hot.
- * @btc_override_cold_degc:	Temperature in degCelcius when the battery is
- *				deemed cold and charging never happens. Used
- *				only if btc_override = 1
- * @btc_override_hot_degc:	Temperature in degCelcius when the battery is
- *				deemed hot and charging never happens. Used
- *				only if btc_override = 1
- * @btc_delay_ms:	Delay in milliseconds to monitor the battery temperature
- *			while charging when btc_override = 1
- * @btc_panic_if_cant_stop_chg:	flag to instruct the driver to panic if the
- *				driver couldn't stop charging when battery
- *				temperature is out of bounds. Used only if
- *				btc_override = 1
- * stop_chg_upon_expiry:	flag to indicate that the charger driver should
+ * @stop_chg_upon_expiry:	flag to indicate that the charger driver should
  *				stop charging the battery when the safety timer
  *				expires. If not set the charger driver will
  *				restart charging upon expiry.
  */
 struct pm8921_charger_platform_data {
 	struct pm8xxx_charger_core_data	charger_cdata;
+	unsigned int			safety_time;
 	unsigned int			ttrkl_time;
 	unsigned int			update_time;
 	unsigned int			max_voltage;
 	unsigned int			min_voltage;
 	unsigned int			uvd_thresh_voltage;
-	unsigned int			safe_current_ma;
 	unsigned int			alarm_low_mv;
 	unsigned int			alarm_high_mv;
 	unsigned int			resume_voltage_delta;
@@ -165,11 +164,11 @@ struct pm8921_charger_platform_data {
 	unsigned int			warm_bat_chg_current;
 	unsigned int			cool_bat_voltage;
 	unsigned int			warm_bat_voltage;
-	int				hysteresis_temp;
 	unsigned int			(*get_batt_capacity_percent) (void);
 	int64_t				batt_id_min;
 	int64_t				batt_id_max;
 	bool				keep_btm_on_suspend;
+	bool				dc_unplug_check;
 	bool				has_dc_supply;
 	int				trkl_voltage;
 	int				weak_voltage;
@@ -178,19 +177,31 @@ struct pm8921_charger_platform_data {
 	int				vin_min;
 	int				*thermal_mitigation;
 	int				thermal_levels;
+#ifdef CONFIG_LGE_CHARGER_TEMP_SCENARIO
+	/*           
+                                    
+                                
+*/
+	xo_mitigation_way thermal_mitigation_method;
+/*                               */
+#endif
+/*                                       */
 	enum pm8921_chg_cold_thr	cold_thr;
 	enum pm8921_chg_hot_thr		hot_thr;
+#ifdef CONFIG_MACH_LGE
+	int batt_id_gpio;			/* No. of msm gpio for battery id */
+	int batt_id_pu_gpio;		/* No. of msm gpio for battery id pull up */
+#endif
 	int				rconn_mohm;
 	enum pm8921_chg_led_src_config	led_src_config;
-	int				battery_less_hardware;
-	int				btc_override;
-	int				btc_override_cold_degc;
-	int				btc_override_hot_degc;
-	int				btc_delay_ms;
-	int				btc_panic_if_cant_stop_chg;
-	int				stop_chg_upon_expiry;
-	bool				disable_chg_rmvl_wrkarnd;
-	bool				enable_tcxo_warmup_delay;
+#ifdef CONFIG_MACH_MSM8930_FX3
+	bool				aicl;
+#endif
+#ifdef CONFIG_LGE_PM_BOOST_IC
+	unsigned int boost_byp_sw_gpio;
+	unsigned int boost_byp_thr;
+#endif /*                        */
+	int 			stop_chg_upon_expiry;
 };
 
 enum pm8921_charger_source {
@@ -203,6 +214,23 @@ enum pm8921_charger_source {
 void pm8921_charger_vbus_draw(unsigned int mA);
 int pm8921_charger_register_vbus_sn(void (*callback)(int));
 void pm8921_charger_unregister_vbus_sn(void (*callback)(int));
+/*                                                          */
+#ifdef CONFIG_LGE_PM
+extern int pm8921_charger_is_ta_connected(void);
+#ifdef CONFIG_LGE_PM_VZW_FAST_CHG
+extern void set_vzw_charging_state(void);
+#endif
+#endif
+/*                          */
+/**
+ * pm8921_charger_enable -
+ *
+ * @enable: 1 means enable charging, 0 means disable
+ *
+ * Enable/Disable battery charging current, the device will still draw current
+ * from the charging source
+ */
+int pm8921_charger_enable(bool enable);
 
 /**
  * pm8921_is_usb_chg_plugged_in - is usb plugged in
@@ -310,6 +338,10 @@ int pm8921_usb_ovp_set_hystersis(enum pm8921_usb_debounce_time ms);
  *
  */
 int pm8921_usb_ovp_disable(int disable);
+#ifdef CONFIG_LGE_PM
+void pm8921_charger_force_update_batt_psy(void);
+#endif
+
 /**
  * pm8921_is_batfet_closed - battery fet status
  *
@@ -327,6 +359,10 @@ static inline int pm8921_charger_register_vbus_sn(void (*callback)(int))
 }
 static inline void pm8921_charger_unregister_vbus_sn(void (*callback)(int))
 {
+}
+static inline int pm8921_charger_enable(bool enable)
+{
+	return -ENXIO;
 }
 static inline int pm8921_is_usb_chg_plugged_in(void)
 {
@@ -373,6 +409,11 @@ static inline int pm8921_batt_temperature(void)
 {
 	return -ENXIO;
 }
+#ifdef CONFIG_LGE_PM
+static inline void pm8921_charger_force_update_batt_psy(void)
+{
+}
+#endif
 static inline int pm8921_usb_ovp_set_threshold(enum pm8921_usb_ov_threshold ov)
 {
 	return -ENXIO;

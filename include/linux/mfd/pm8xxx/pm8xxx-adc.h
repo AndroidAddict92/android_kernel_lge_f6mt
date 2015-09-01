@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -110,7 +110,11 @@ enum pm8xxx_adc_channels {
 #define PM8XXX_AMUX_MPP_6	0x6
 #define PM8XXX_AMUX_MPP_7	0x7
 #define PM8XXX_AMUX_MPP_8	0x8
-
+#ifdef CONFIG_LGE_PM
+/*                                                                    */
+#define PM8XXX_AMUX_MPP_12	0xC
+/*                                        */
+#endif
 #define PM8XXX_ADC_DEV_NAME	"pm8xxx-adc"
 
 /**

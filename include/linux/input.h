@@ -3,7 +3,6 @@
 
 /*
  * Copyright (c) 1999-2002 Vojtech Pavlik
- * Copyright (c) 2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -199,8 +198,6 @@ struct input_keymap_entry {
 #define SYN_CONFIG		1
 #define SYN_MT_REPORT		2
 #define SYN_DROPPED		3
-#define SYN_TIME_SEC		4
-#define SYN_TIME_NSEC		5
 
 /*
  * Keys and buttons
@@ -293,7 +290,6 @@ struct input_keymap_entry {
 #define KEY_KP6			77
 #define KEY_KPPLUS		78
 #define KEY_KP1			79
-#define KEY_REVERSE		KEY_KP1
 #define KEY_KP2			80
 #define KEY_KP3			81
 #define KEY_KP0			82
@@ -474,6 +470,28 @@ struct input_keymap_entry {
 
 #define KEY_MICMUTE		248	/* Mute / unmute the microphone */
 
+
+/*             
+                                     
+                                      
+ */
+#if defined(CONFIG_MACH_LGE_F6_TMUS)|| defined(CONFIG_MACH_LGE_F6_VDF) || defined(CONFIG_MACH_LGE_L9II_OPEN_EU) || defined(CONFIG_MACH_LGE_F6_ORG)|| defined(CONFIG_MACH_LGE_F6_OPEN) || defined(CONFIG_MACH_LGE_F6_TMO)
+#define KEY_QUICKMEMO	499
+#endif
+/*             */
+
+/*           
+                               
+                        
+                                 
+ */
+#if defined(CONFIG_MACH_LGE_FX3_VZW) || defined(CONFIG_MACH_LGE_FX3Q_TMUS) 
+#define KEY_RECENT		251
+#define KEY_SYMBOL		252
+#define KEY_Q_BACK		253
+#define KEY_Q_HOME		254
+#define KEY_Q_MENU		250
+#endif
 /* Code 255 is reserved for special needs of AT keyboard driver */
 
 #define BTN_MISC		0x100
@@ -1514,7 +1532,9 @@ void input_inject_event(struct input_handle *handle, unsigned int type, unsigned
 
 static inline void input_report_key(struct input_dev *dev, unsigned int code, int value)
 {
-	input_event(dev, EV_KEY, code, !!value);
+/*            */
+/*	input_event(dev, EV_KEY, code, !!value); */
+    input_event(dev, EV_KEY, code, value); /* Changed value from boolean to int for cancel key */
 }
 
 static inline void input_report_rel(struct input_dev *dev, unsigned int code, int value)

@@ -1,5 +1,5 @@
 /*
-  * Copyright (C) 2011, 2012 LGE, Inc.
+  * Copyright (C) 2012 LGE, Inc.
   *
   * This software is licensed under the terms of the GNU General Public
   * License version 2, as published by the Free Software Foundation, and
@@ -11,20 +11,22 @@
   * GNU General Public License for more details.
   */
 
-#ifndef __LINUX_ANDROID_VIBRATOR_H
-#define __LINUX_ANDROID_VIBRATOR_H
+#ifndef __LINUX_DIRECT_QCOIN_H
+#define __LINUX_DIRECT_QCOIN_H
 
-/* android vibrator platform data */
-struct android_vibrator_platform_data {
+#define PM8XXX_VIBRATOR_DEV_NAME "pm8xxx-vib"
+
+#define GAIN_MAX 128
+#define GAIN_MIN 0
+
+/* direct qcoin platform data */
+struct direct_qcoin_platform_data {
 	int enable_status;
 	int amp;
-	int vibe_n_value;
-	int vibe_warmup_delay; /* in ms */
-	int (*power_set)(int enable); /* LDO Power Set Function */
-	int (*pwm_set)(int enable, int gain, int n_value); /* PWM Set Function */
-	int (*ic_enable_set)(int enable); /* Motor IC Set Function */
-	int (*vibrator_init)(void);
+        int (*power_set)(struct device *dev, int enable);
+	int high_max;
+	int low_max;
+	int low_min;
 };
 
 #endif
-
